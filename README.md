@@ -1,193 +1,186 @@
-# kodi-addon-meteo
+**English** · [Français](readme.fr.md)
 
-**Fournisseur météo Kodi pour la France**, basé sur l'API
-[Météo Concept](https://api.meteo-concept.com) (données Météo-France).
-Une localisation, libellés en **français**, et icônes affichées par votre
-skin (Arctic Zephyr, Estuary…).
+# Météo Concept — `weather.meteoconcept`
 
-> Identifiant de l'addon : `weather.meteoconcept` · Type :
-> `xbmc.python.weather` · Kodi ≥ 19 (Matrix), Python 3.
+**Kodi weather provider for France**, based on the
+[Météo Concept](https://api.meteo-concept.com) API (Météo-France data).
+Single location, **French** labels, and icons rendered by your skin
+(Arctic Zephyr, Estuary…).
 
----
-
-## Sommaire
-
-- [Fonctionnalités](#fonctionnalités)
-- [Prérequis](#prérequis)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Comment ça marche](#comment-ça-marche)
-- [Quota et cache](#quota-et-cache)
-- [Codes météo et icônes](#codes-météo-et-icônes)
-- [Dépannage](#dépannage)
-- [Développement](#développement)
-- [Structure du projet](#structure-du-projet)
-- [Contribuer](#contribuer)
-- [Licence et crédits](#licence-et-crédits)
+> Add-on id: `weather.meteoconcept` · Type: `xbmc.python.weather` ·
+> Kodi ≥ 19 (Matrix), Python 3.
 
 ---
-
-## Fonctionnalités
-
-- **Conditions actuelles** : température, vent (vitesse + direction en
-  français), humidité, condition.
-- **Prévisions journalières** sur 7 jours (min/max, condition, probabilité de
-  pluie, vent).
-- **Prévisions horaires** sur les 12 prochaines heures.
-- **Libellés en français** issus de la table « temps sensible » de Météo Concept.
-- **Icônes du skin** : l'addon publie le code condition Kodi (0–47) ; votre
-  skin affiche ses propres pictogrammes, cohérents avec son habillage.
-- **Gestion jour / nuit** automatique (icône lune après le coucher du soleil),
-  via l'éphéméride de la commune.
-- **Recherche de commune** par nom ou code postal, directement dans Kodi.
-- **Bouton « Enregistrer et tester le token »** qui valide la clé par un appel
-  réel à l'API.
-- **Cache fichier paramétrable** pour rester très loin du quota gratuit.
-
-## Prérequis
-
-- **Kodi 19 (Matrix) ou supérieur** (testé jusqu'à Omega), Python 3.
-- Un **token gratuit Météo Concept** : créez un compte sur
-  <https://api.meteo-concept.com>, formule *Basique* (500 requêtes/jour).
-- Une commune en **France métropolitaine** (Belgique, Luxembourg et Andorre
-  sont aussi couverts par l'API via coordonnées).
 
 ## Installation
 
-### Depuis le zip (recommandé)
+**Recommended — TheWorms repository** (automatic updates).
 
-1. Récupérez le zip : soit le fichier `dist/weather.meteoconcept-x.y.z.zip`
-   d'une *release*, soit construisez-le vous-même (voir
-   [Développement](#développement)).
-2. Dans Kodi : **Réglages → Modules → Installer depuis un fichier ZIP**.
-3. Sélectionnez le zip. Autorisez au besoin les « sources inconnues »
-   (Réglages → Système → Modules → Sources inconnues).
+Download the repository by clicking **[HERE](https://raw.githubusercontent.com/TheWorms/kodi-repo/main/zips/repository.theworms/repository.theworms.zip)**, then in Kodi:
 
-### Depuis les sources
+1. **Add-ons** → **Install from zip file** → select the downloaded zip
+   *(if Kodi blocks it, enable **Unknown sources** under Settings → Add-ons)*
+2. **Install from repository** → **TheWorms Repository** → pick the add-on
+3. Updates will then be automatic
 
-Clonez le dépôt, puis pointez Kodi sur le dossier `weather.meteoconcept`
-(copie dans `~/.kodi/addons/` ou installation du zip généré par `build.sh`).
+**Manual install (alternative):** download the add-on zip from the [Releases](../../releases) page, then **Add-ons** → **Install from zip file**.
+
+---
+
+## Contents
+
+- [Features](#features)
+- [Requirements](#requirements)
+- [Configuration](#configuration)
+- [How it works](#how-it-works)
+- [Quota and cache](#quota-and-cache)
+- [Weather codes and icons](#weather-codes-and-icons)
+- [Troubleshooting](#troubleshooting)
+- [Development](#development)
+- [Project structure](#project-structure)
+- [Contributing](#contributing)
+- [License and credits](#license-and-credits)
+
+---
+
+## Features
+
+- **Current conditions**: temperature, wind (speed + direction in plain text),
+  humidity, condition.
+- **Daily forecast** over 7 days (min/max, condition, rain probability, wind).
+- **Hourly forecast** for the next 12 hours.
+- **French labels** from Météo Concept's "sensible weather" table.
+- **Skin icons**: the add-on publishes the Kodi condition code (0–47); your skin
+  shows its own pictograms, consistent with its theme.
+- **Automatic day / night** handling (moon icon after sunset), via the town's
+  ephemeris.
+- **Town search** by name or postal code, directly in Kodi.
+- **"Save and test token" button** that validates the key with a real API call.
+- **Configurable file cache** to stay well below the free quota.
+
+## Requirements
+
+- **Kodi 19 (Matrix) or later** (tested up to Omega), Python 3.
+- A **free Météo Concept token**: create an account at
+  <https://api.meteo-concept.com>, *Basic* plan (500 requests/day).
+- A town in **mainland France** (Belgium, Luxembourg and Andorra are also
+  covered by the API via coordinates).
 
 ## Configuration
 
-1. **Réglages → Modules → Mes modules → Services → Météo Concept → Configurer**.
-2. Collez votre **token** dans le champ prévu.
-3. Cliquez sur **« Enregistrer et tester le token »** : saisissez/collez le
-   token dans la fenêtre, validez. L'addon l'enregistre puis le teste, et
-   confirme « valide ✓ » ou affiche l'erreur renvoyée par l'API.
-4. Cliquez sur **« Rechercher une commune… »**, tapez le nom ou le code postal,
-   sélectionnez la commune (le code INSEE est enregistré automatiquement).
-5. Activez l'addon comme fournisseur : **Réglages → Météo → Service
-   d'informations météo → Météo Concept**.
+1. **Settings → Add-ons → My add-ons → Services → Météo Concept → Configure**.
+2. Paste your **token** in the dedicated field.
+3. Click **"Save and test token"**: type/paste the token in the window and
+   confirm. The add-on saves it, tests it, and reports "valid ✓" or shows the
+   error returned by the API.
+4. Click **"Search a town…"**, type the name or postal code, and select the
+   town (the INSEE code is saved automatically).
+5. Enable the add-on as provider: **Settings → Weather → Weather information
+   service → Météo Concept**.
 
-> Certains skins (dont Arctic Zephyr) ont **leur propre** réglage de
-> fournisseur météo : vérifiez aussi côté skin si le widget d'accueil ne se met
-> pas à jour.
+> Some skins (including Arctic Zephyr) have **their own** weather provider
+> setting: check the skin side too if the home widget doesn't update.
 
-## Comment ça marche
+## How it works
 
-Kodi appelle l'addon de plusieurs façons :
+Kodi calls the add-on in several ways:
 
-- `RunScript(weather.meteoconcept,Location1)` → recherche/choix de la commune.
-- `RunScript(weather.meteoconcept,TestToken)` → enregistrement + test du token.
-- avec un index numérique (`1`) → récupération de la météo.
+- `RunScript(weather.meteoconcept,Location1)` → search/select the town.
+- `RunScript(weather.meteoconcept,TestToken)` → save + test the token.
+- with a numeric index (`1`) → fetch the weather.
 
-À chaque récupération, l'addon interroge trois routes Météo Concept
-(`/forecast/nextHours`, `/forecast/daily`, `/ephemeride/0`), puis écrit des
-**propriétés de fenêtre** sur la fenêtre météo de Kodi (`Window(12600)`), que
-le skin lit pour l'affichage :
+On each fetch, the add-on queries three Météo Concept routes
+(`/forecast/nextHours`, `/forecast/daily`, `/ephemeride/0`), then writes
+**window properties** to Kodi's weather window (`Window(12600)`), which the skin
+reads for display:
 
-- `Current.*` (conditions actuelles),
-- `Daily.N.*` et `Day0..6.*` (prévisions journalières, format étendu + hérité),
-- `Hourly.N.*` (prévisions horaires),
+- `Current.*` (current conditions),
+- `Daily.N.*` and `Day0..6.*` (daily forecast, extended + legacy format),
+- `Hourly.N.*` (hourly forecast),
 - `Location1` + `Locations`, `Forecast.City`, `Today.Sunrise`/`Sunset`.
 
-> ⚠️ La propriété de fenêtre `Location1` est **essentielle** : c'est elle que
-> lisent le widget d'accueil et l'infolabel `Weather.Location`. Sans elle, le
-> widget conserverait la localisation laissée par un fournisseur précédent.
+> ⚠️ The `Location1` window property is **essential**: it is what the home widget
+> and the `Weather.Location` infolabel read. Without it, the widget would keep
+> the location left by a previous provider.
 
-L'addon **vide toutes les catégories** avant d'écrire, pour ne jamais laisser
-de valeurs résiduelles d'un autre fournisseur.
+The add-on **clears all categories** before writing, so it never leaves residual
+values from another provider.
 
-## Quota et cache
+## Quota and cache
 
-La formule *Basique* est limitée à **500 requêtes/jour**. Chaque
-rafraîchissement consomme **3 appels** (horaire + journalier + éphéméride).
-Avec le **cache** (30 min par défaut, réglable de 10 à 120 min) et un intervalle
-de rafraîchissement Kodi raisonnable, l'usage reste de l'ordre de la centaine
-d'appels par jour — très en deçà du plafond. Le cache est stocké dans le profil
-de l'addon (`~/.kodi/userdata/addon_data/weather.meteoconcept/`).
+The *Basic* plan is limited to **500 requests/day**. Each refresh consumes
+**3 calls** (hourly + daily + ephemeris). With the **cache** (30 min by default,
+adjustable from 10 to 120 min) and a reasonable Kodi refresh interval, usage
+stays around a hundred calls per day — far below the cap. The cache is stored in
+the add-on profile (`~/.kodi/userdata/addon_data/weather.meteoconcept/`).
 
-## Codes météo et icônes
+## Weather codes and icons
 
-Le champ `weather` de l'API est un entier « temps sensible » (codes 0 à 235).
-Le module `resources/lib/meteo_concept_mapping.py` le traduit en :
+The API's `weather` field is a "sensible weather" integer (codes 0 to 235).
+The `resources/lib/meteo_concept_mapping.py` module translates it into:
 
-- un **libellé français** (table officielle Météo Concept),
-- un **code condition Kodi 0–47** = le nom de l'icône du skin (`28.png`…).
+- a **French label** (official Météo Concept table),
+- a **Kodi condition code 0–47** = the skin icon name (`28.png`…).
 
-Pour utiliser un jeu d'icônes embarqué plutôt que celui du skin, la fonction
-`get_icon_path(code, is_day, icons_dir=…)` renvoie un chemin complet. Un set
-libre et complet : [Weather Icons d'Erik Flowers](https://erikflowers.github.io/weather-icons/)
-(licence SIL OFL).
+To use a bundled icon set instead of the skin's, the function
+`get_icon_path(code, is_day, icons_dir=…)` returns a full path. A free and
+complete set: [Erik Flowers' Weather Icons](https://erikflowers.github.io/weather-icons/)
+(SIL OFL license).
 
-## Dépannage
+## Troubleshooting
 
-**Le widget d'accueil garde l'ancien fournisseur (localisation figée).**
-Les propriétés de fenêtre persistent en mémoire jusqu'à réécriture. Après
-changement de fournisseur, **redémarrez Kodi** (ou désactivez/réactivez
-l'addon) pour forcer la réécriture propre.
+**The home widget keeps the old provider (frozen location).**
+Window properties persist in memory until rewritten. After changing provider,
+**restart Kodi** (or disable/re-enable the add-on) to force a clean rewrite.
 
-**« Token manquant » alors que je viens de le saisir.**
-Kodi ne sauvegarde la valeur d'un champ qu'à la **fermeture** des réglages.
-Utilisez le bouton **« Enregistrer et tester le token »** (qui enregistre
-immédiatement), ou saisissez le token puis fermez par **OK** avant de lancer
-une autre action.
+**"Missing token" right after I entered it.**
+Kodi only saves a field's value when the settings dialog **closes**. Use the
+**"Save and test token"** button (which saves immediately), or type the token
+then close with **OK** before doing anything else.
 
-**Vérifier ce que l'addon lit / écrit.**
-Activez le débogage (Réglages → Système → Journalisation → Activer la
-journalisation de débogage), puis :
+**Check what the add-on reads / writes.**
+Enable debugging (Settings → System → Logging → Enable debug logging), then:
 
 ```bash
 tail -f ~/.kodi/temp/kodi.log | grep meteoconcept
 ```
 
-**Vérifier que le token est bien enregistré :**
+**Check that the token is saved:**
 
 ```bash
 cat ~/.kodi/userdata/addon_data/weather.meteoconcept/settings.xml
 ```
 
-## Développement
+## Development
 
-Construire le zip installable (nommé d'après la version d'`addon.xml`) :
+Build the installable zip (named after the version in `addon.xml`):
 
 ```bash
 ./build.sh          # -> dist/weather.meteoconcept-x.y.z.zip
 ```
 
-Les modules `resources/lib/` sont indépendants de Kodi et peuvent être testés
-hors de Kodi (le mapping et le client API n'importent pas `xbmc*`) :
+The `resources/lib/` modules are Kodi-independent and can be tested outside Kodi
+(the mapping and the API client don't import `xbmc*`):
 
 ```bash
 python3 weather.meteoconcept/resources/lib/meteo_concept_mapping.py
 ```
 
-Pour modifier l'**identifiant** de l'addon, répercutez-le sur trois éléments
-cohérents : le dossier `weather.meteoconcept/`, l'attribut `id` d'`addon.xml`,
-et les actions `RunScript(...)` de `settings.xml`.
+To change the add-on **id**, update three consistent elements: the
+`weather.meteoconcept/` folder, the `id` attribute of `addon.xml`, and the
+`RunScript(...)` actions in `settings.xml`.
 
-## Structure du projet
+## Project structure
 
 ```
 kodi-addon-meteo/
-├── README.md
+├── README.md / readme.fr.md
 ├── LICENSE                         # GPL-2.0
 ├── .gitignore
-├── build.sh                        # produit dist/weather.meteoconcept-x.y.z.zip
-└── weather.meteoconcept/           # l'addon (id : weather.meteoconcept)
+├── build.sh                        # produces dist/weather.meteoconcept-x.y.z.zip
+└── weather.meteoconcept/           # the add-on (id: weather.meteoconcept)
     ├── addon.xml
-    ├── default.py                  # point d'entrée Kodi
+    ├── default.py                  # Kodi entry point
     ├── icon.png
     ├── LICENSE.txt
     ├── changelog.txt
@@ -196,22 +189,22 @@ kodi-addon-meteo/
         ├── icons/logo.png
         ├── language/resource.language.fr_fr/strings.po
         └── lib/
-            ├── meteoconcept.py            # client API + cache
-            └── meteo_concept_mapping.py   # codes météo -> libellé FR + icône
+            ├── meteoconcept.py            # API client + cache
+            └── meteo_concept_mapping.py   # weather codes -> FR label + icon
 ```
 
-## Contribuer
+## Contributing
 
-Les contributions sont bienvenues : ouvrez une *issue* ou une *pull/merge
-request*. Merci de garder les modules `resources/lib/` testables hors Kodi et
-de mettre à jour `changelog.txt` ainsi que la version dans `addon.xml`.
+Contributions are welcome: open an *issue* or a *pull/merge request*. Please keep
+the `resources/lib/` modules testable outside Kodi and update `changelog.txt` as
+well as the version in `addon.xml`.
 
-## Licence et crédits
+## License and credits
 
-- Code sous **GPL-2.0-only** — voir [`LICENSE`](LICENSE).
-- Données météo © **Météo Concept** (<https://api.meteo-concept.com>), basées
-  sur des données **Météo-France**. L'usage des données est soumis aux
-  conditions de Météo Concept. Ce projet n'est ni affilié ni approuvé par
-  Météo Concept ou Météo-France.
-- Modèle de fournisseur météo Kodi inspiré de l'addon open source
+- Code under **GPL-2.0-only** — see [`LICENSE`](LICENSE).
+- Weather data © **Météo Concept** (<https://api.meteo-concept.com>), based on
+  **Météo-France** data. Use of the data is subject to Météo Concept's terms.
+  This project is neither affiliated with nor endorsed by Météo Concept or
+  Météo-France.
+- Kodi weather provider template inspired by the open-source add-on
   [`weather.gismeteo`](https://github.com/vlmaksime/weather.gismeteo) (GPL).
