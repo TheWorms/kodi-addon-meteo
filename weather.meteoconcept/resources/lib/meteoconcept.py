@@ -31,6 +31,33 @@ class MeteoConceptError(Exception):
     pass
 
 
+def infer_subscription(headers):
+    """Déduit le palier d'abonnement à partir des en-têtes HTTP de quota.
+
+    Météo Concept propose les mêmes routes/fonctions sur toutes les formules ;
+    seul le VOLUME d'appels diffère (Basique = 500/jour, Standard/Premium = plus).
+    On lit donc une éventuelle limite quotidienne dans les en-têtes.
+
+    Retourne (label, detail) :
+      - ("Basique", "500 appels/jour")          si limite <= 500
+      - ("Standard ou Premium", "N appels/jour") si limite > 500
+      - (None, None)                              si l'API n'expose aucun quota
+    """
+    limit = None
+    for key, value in headers.items():
+        k = key.lower()
+        if ("limit" in k or "quota" in k) and "remaining" not in k and "reset" not in k:
+            digits = "".join(ch for ch in str(value) if ch.isdigit())
+            if digits:
+                limit = int(digits)
+                break
+    if limit is None:
+        return None, None
+    if limit <= 500:
+        return "Basique", "%d appels/jour (formule gratuite)" % limit
+    return "Standard ou Premium", "%d appels/jour (formule payante)" % limit
+
+
 class MeteoConcept(object):
     def __init__(self, token, cache_dir=None, cache_minutes=30):
         self.token = (token or "").strip()
@@ -115,6 +142,33 @@ class MeteoConcept(object):
     # ------------------------------------------------------------------ #
     # Routes utilisées par l'addon
     # ------------------------------------------------------------------ #
+    def validate(self, insee="35238"):
+        """Valide le token via une route légère SANS cache, et renvoie un dict
+        {'data', 'headers'} pour pouvoir lire d'éventuels en-têtes de quota.
+        Lève MeteoConceptError si le token est invalide / la requête échoue."""
+        if not self.token:
+            raise MeteoConceptError("Token Météo Concept manquant.")
+        params = {"insee": insee, "token": self.token}
+        url = "%s/location/city?%s" % (BASE_URL, urllib.parse.urlencode(params))
+        req = urllib.request.Request(
+            url,
+            headers={"Accept": "application/json",
+                     "User-Agent": "kodi-addon-meteo/1.0"},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                raw = resp.read().decode("utf-8")
+                headers = {k.lower(): v for k, v in resp.headers.items()}
+            data = json.loads(raw)
+        except urllib.error.HTTPError as e:
+            msg = STATUS_MESSAGES.get(e.code, "Erreur HTTP %s" % e.code)
+            raise MeteoConceptError(msg)
+        except urllib.error.URLError as e:
+            raise MeteoConceptError("Connexion impossible : %s" % e.reason)
+        except ValueError:
+            raise MeteoConceptError("Réponse illisible de l'API.")
+        return {"data": data, "headers": headers}
+
     def location_city(self, insee="35238"):
         """Route légère (commune par INSEE) — sert à valider le token."""
         return self._request("/location/city", {"insee": insee})

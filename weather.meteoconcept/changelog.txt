@@ -1,3 +1,9 @@
+v1.0.3
+- Ajout d'un fanart (1920x1080).
+- provider-name corrigé en "theworms".
+- Le test du token indique le palier d'abonnement détecté (Basique vs
+  payant) d'après le quota renvoyé par l'API, avec repli si non exposé.
+
 v1.0.2
 - Correctif widget d'accueil : publication de la propriété de fenêtre
   Location1 + compteur Locations (le widget gardait la localisation de

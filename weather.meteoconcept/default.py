@@ -106,10 +106,10 @@ def test_token(location_index="1"):
     ADDON.setSetting("token", token)
     log("Token enregistré (%d caractères), test en cours…" % len(token))
 
-    # Pas de cache : on force un vrai appel réseau pour valider
+    # Pas de cache : on force un vrai appel réseau pour valider et lire les en-têtes
     api = meteoconcept.MeteoConcept(token)
     try:
-        api.location_city("35238")
+        result = api.validate("35238")
     except meteoconcept.MeteoConceptError as e:
         log("Token invalide : %s" % e)
         xbmcgui.Dialog().ok(
@@ -117,11 +117,25 @@ def test_token(location_index="1"):
             "Token enregistré, mais le test a échoué :\n\n%s" % e)
         return
 
+    # Détection du palier d'abonnement (Basique / payant) via le quota
+    headers = result.get("headers", {})
+    log("En-têtes de réponse : %s" % ", ".join(sorted(headers.keys())))
+    tier, detail = meteoconcept.infer_subscription(headers)
+
+    if tier:
+        abo = u"Abonnement : %s\n(%s)" % (tier, detail)
+        log("Palier détecté : %s (%s)" % (tier, detail))
+    else:
+        abo = (u"Abonnement : non communiqué par l'API.\n"
+               u"(Toutes les formules ont les mêmes routes ; "
+               u"seul le volume d'appels diffère.)")
+        log("Palier non détecté (aucun en-tête de quota).")
+
     log("Token valide.")
     xbmcgui.Dialog().ok(
         ADDON.getAddonInfo("name"),
-        "Token enregistré et valide. \u2713\n\n"
-        "Vous pouvez maintenant rechercher votre commune.")
+        u"Token enregistré et valide. \u2713\n\n%s\n\n"
+        u"Vous pouvez maintenant rechercher votre commune." % abo)
 
 
 # --------------------------------------------------------------------------- #
