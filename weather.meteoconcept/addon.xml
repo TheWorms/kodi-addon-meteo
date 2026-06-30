@@ -2,7 +2,7 @@
 <addon id="weather.meteoconcept"
        name="Météo Concept"
        version="1.0.2"
-       provider-name="kodi-addon-meteo">
+       provider-name="theworms">
   <requires>
     <import addon="xbmc.python" version="3.0.0"/>
   </requires>
