@@ -31,31 +31,52 @@ class MeteoConceptError(Exception):
     pass
 
 
-def infer_subscription(headers):
-    """Déduit le palier d'abonnement à partir des en-têtes HTTP de quota.
-
-    Météo Concept propose les mêmes routes/fonctions sur toutes les formules ;
-    seul le VOLUME d'appels diffère (Basique = 500/jour, Standard/Premium = plus).
-    On lit donc une éventuelle limite quotidienne dans les en-têtes.
-
-    Retourne (label, detail) :
-      - ("Basique", "500 appels/jour")          si limite <= 500
-      - ("Standard ou Premium", "N appels/jour") si limite > 500
-      - (None, None)                              si l'API n'expose aucun quota
-    """
-    limit = None
+def _read_daily_limit(headers):
+    """Cherche une limite d'appels quotidienne dans les en-têtes HTTP.
+    Retourne un entier ou None si rien n'est exposé."""
     for key, value in headers.items():
         k = key.lower()
         if ("limit" in k or "quota" in k) and "remaining" not in k and "reset" not in k:
             digits = "".join(ch for ch in str(value) if ch.isdigit())
             if digits:
-                limit = int(digits)
-                break
-    if limit is None:
-        return None, None
-    if limit <= 500:
-        return "Basique", "%d appels/jour (formule gratuite)" % limit
-    return "Standard ou Premium", "%d appels/jour (formule payante)" % limit
+                return int(digits)
+    return None
+
+
+def infer_subscription(headers, is_premium):
+    """Déduit le palier d'abonnement Météo Concept.
+
+    Les fonctions diffèrent ainsi (cf. page tarifs) :
+      - Basique & Standard : mêmes routes ; seul le volume d'appels change
+        (Basique = 500/jour gratuit, Standard = plus, payant).
+      - Premium : seul à débloquer indice UV, archives/stats, prévisions
+        horaires/tri-horaires sur 14 j et cartes.
+
+    Méthode :
+      - Premium est détecté en amont en testant une route exclusive
+        (indice UV) : `is_premium` vaut True/False/None.
+      - Si non Premium, on départage Basique/Standard via le quota.
+
+    Retourne (label, detail).
+    """
+    if is_premium is True:
+        return "Premium", u"indice UV, archives et cartes accessibles"
+
+    limit = _read_daily_limit(headers)
+    if is_premium is False:
+        # Route UV refusée (403) -> forcément Basique ou Standard
+        if limit is not None and limit > 500:
+            return "Standard", u"%d appels/jour (formule payante)" % limit
+        if limit is not None:
+            return "Basique", u"%d appels/jour (formule gratuite)" % limit
+        return "Basique ou Standard", u"indice UV non accessible ; quota non communiqué"
+
+    # is_premium indéterminé (erreur réseau sur le test UV) : on se rabat sur le quota
+    if limit is not None and limit <= 500:
+        return "Basique", u"%d appels/jour" % limit
+    if limit is not None:
+        return "Standard ou Premium", u"%d appels/jour" % limit
+    return None, None
 
 
 class MeteoConcept(object):
@@ -142,6 +163,38 @@ class MeteoConcept(object):
     # ------------------------------------------------------------------ #
     # Routes utilisées par l'addon
     # ------------------------------------------------------------------ #
+    def probe_premium(self, insee="35238"):
+        """Teste la route exclusivement Premium « indice UV »
+        (/forecast/uv/daily/0). Sur Basique/Standard l'API renvoie 403.
+
+        Retourne :
+          - True  si Premium (route autorisée : 200, ou 400 = atteinte mais
+                   paramètre rejeté après autorisation)
+          - False si 403 (route refusée pour l'abonnement)
+          - None  si indéterminé (token absent, panne réseau, 401/500…)
+        """
+        if not self.token:
+            return None
+        params = {"insee": insee, "token": self.token}
+        url = "%s/forecast/uv/daily/0?%s" % (BASE_URL, urllib.parse.urlencode(params))
+        req = urllib.request.Request(
+            url,
+            headers={"Accept": "application/json",
+                     "User-Agent": "kodi-addon-meteo/1.0"},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                resp.read()
+            return True
+        except urllib.error.HTTPError as e:
+            if e.code == 403:
+                return False
+            if e.code == 400:
+                return True   # route atteinte/autorisée, simple souci de paramètre
+            return None       # 401/404/500/503 : non concluant
+        except urllib.error.URLError:
+            return None
+
     def validate(self, insee="35238"):
         """Valide le token via une route légère SANS cache, et renvoie un dict
         {'data', 'headers'} pour pouvoir lire d'éventuels en-têtes de quota.

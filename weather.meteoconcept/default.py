@@ -117,19 +117,22 @@ def test_token(location_index="1"):
             "Token enregistré, mais le test a échoué :\n\n%s" % e)
         return
 
-    # Détection du palier d'abonnement (Basique / payant) via le quota
+    # Détection du palier : on teste la route UV (exclusive Premium),
+    # puis on départage Basique/Standard via le quota.
     headers = result.get("headers", {})
     log("En-têtes de réponse : %s" % ", ".join(sorted(headers.keys())))
-    tier, detail = meteoconcept.infer_subscription(headers)
+    is_premium = api.probe_premium("35238")
+    log("Test route UV (Premium) : %s" % {True: "accessible",
+                                          False: "refusée (403)",
+                                          None: "indéterminé"}[is_premium])
+    tier, detail = meteoconcept.infer_subscription(headers, is_premium)
 
     if tier:
         abo = u"Abonnement : %s\n(%s)" % (tier, detail)
         log("Palier détecté : %s (%s)" % (tier, detail))
     else:
-        abo = (u"Abonnement : non communiqué par l'API.\n"
-               u"(Toutes les formules ont les mêmes routes ; "
-               u"seul le volume d'appels diffère.)")
-        log("Palier non détecté (aucun en-tête de quota).")
+        abo = u"Abonnement : non déterminé automatiquement."
+        log("Palier non déterminé.")
 
     log("Token valide.")
     xbmcgui.Dialog().ok(

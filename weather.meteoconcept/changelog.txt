@@ -1,8 +1,9 @@
 v1.0.3
 - Ajout d'un fanart (1920x1080).
 - provider-name corrigé en "theworms".
-- Le test du token indique le palier d'abonnement détecté (Basique vs
-  payant) d'après le quota renvoyé par l'API, avec repli si non exposé.
+- Le test du token indique le palier d'abonnement : Premium détecté en
+  testant la route exclusive « indice UV » (403 sinon), puis Basique vs
+  Standard d'après le quota d'appels. Replis honnêtes si indéterminable.
 
 v1.0.2
 - Correctif widget d'accueil : publication de la propriété de fenêtre
