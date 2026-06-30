@@ -1,0 +1,9 @@
+This addon is licensed under the GNU General Public License v2.0 only (GPL-2.0-only).
+
+You should have received a copy of the GNU General Public License along with
+this program; if not, see <https://www.gnu.org/licenses/old-licenses/gpl-2.0.html>.
+
+Weather data is provided by Météo Concept (https://api.meteo-concept.com),
+based on Météo-France data. Use of the data is subject to Météo Concept's
+terms of service. This addon is not affiliated with or endorsed by
+Météo Concept or Météo-France.
