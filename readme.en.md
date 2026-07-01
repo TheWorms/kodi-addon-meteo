@@ -2,6 +2,10 @@
 
 # Météo Concept — `weather.meteoconcept`
 
+<!-- version:auto -->
+**Version : 1.0.5**
+<!-- /version:auto -->
+
 **Kodi weather provider for France**, based on the
 [Météo Concept](https://api.meteo-concept.com) API (Météo-France data).
 Single location, **French** labels, and icons rendered by your skin

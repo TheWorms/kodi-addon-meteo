@@ -2,6 +2,10 @@
 
 # Météo Concept — `weather.meteoconcept`
 
+<!-- version:auto -->
+**Version : 1.0.5**
+<!-- /version:auto -->
+
 **Fournisseur météo Kodi pour la France**, basé sur l'API
 [Météo Concept](https://api.meteo-concept.com) (données Météo-France).
 Une localisation, libellés en **français**, et icônes affichées par votre
