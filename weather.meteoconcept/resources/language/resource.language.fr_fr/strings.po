@@ -34,4 +34,4 @@ msgstr "Durée du cache (minutes)"
 
 msgctxt "#32006"
 msgid "Save and test the token"
-msgstr "Enregistrer et tester le token"
+msgstr "Tester le token enregistré"

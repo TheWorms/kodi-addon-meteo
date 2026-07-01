@@ -93,18 +93,23 @@ def is_daytime(dt, sunrise, sunset):
 
 
 def test_token(location_index="1"):
-    current = (ADDON.getSetting("token") or "").strip()
-    keyboard = xbmc.Keyboard(current, "Collez votre token Météo Concept")
-    keyboard.doModal()
-    if not keyboard.isConfirmed():
-        return
-    token = keyboard.getText().strip()
-    if not token:
-        notify("Token vide : rien n'a été enregistré.")
-        return
+    token = (ADDON.getSetting("token") or "").strip()
 
-    ADDON.setSetting("token", token)
-    log("Token enregistré (%d caractères), test en cours…" % len(token))
+    # Un token est déjà saisi dans les réglages : on le teste DIRECTEMENT,
+    # sans redemander quoi que ce soit. Le clavier ne sert qu'en tout premier
+    # paramétrage, quand aucun token n'a encore été enregistré.
+    if not token:
+        keyboard = xbmc.Keyboard("", "Saisir votre token Météo Concept")
+        keyboard.doModal()
+        if not keyboard.isConfirmed():
+            return
+        token = keyboard.getText().strip()
+        if not token:
+            notify("Aucun token saisi.")
+            return
+        ADDON.setSetting("token", token)
+
+    log("Test du token (%d caractères) en cours…" % len(token))
 
     # Pas de cache : on force un vrai appel réseau pour valider et lire les en-têtes
     api = meteoconcept.MeteoConcept(token)
@@ -114,7 +119,8 @@ def test_token(location_index="1"):
         log("Token invalide : %s" % e)
         xbmcgui.Dialog().ok(
             ADDON.getAddonInfo("name"),
-            "Token enregistré, mais le test a échoué :\n\n%s" % e)
+            "Le test du token a échoué :\n\n%s\n\n"
+            "Vérifiez le token dans le champ des réglages." % e)
         return
 
     # Détection du palier : on teste la route UV (exclusive Premium),
