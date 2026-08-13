@@ -51,6 +51,26 @@ def notify(message):
                                   ADDON.getAddonInfo("icon"), 5000)
 
 
+_LASTERR_PROP = "MeteoConcept.LastError"
+
+
+def notify_once(message):
+    """Notification dedupliquee : Kodi rafraichit la meteo periodiquement et
+    a chaque entree dans la fenetre meteo ; sans garde, une panne reseau ou
+    un token manquant produirait un toast a CHAQUE rafraichissement. On ne
+    notifie que si le message differe du dernier ; ensuite, journal seul."""
+    if WEATHER_WINDOW.getProperty(_LASTERR_PROP) == message:
+        log("Erreur inchangee (notification deja emise) : %s" % message)
+        return
+    WEATHER_WINDOW.setProperty(_LASTERR_PROP, message)
+    notify(message)
+
+
+def clear_error():
+    """Rearme la notification d'erreur apres un rafraichissement reussi."""
+    WEATHER_WINDOW.clearProperty(_LASTERR_PROP)
+
+
 # --------------------------------------------------------------------------- #
 # Utilitaires de données
 # --------------------------------------------------------------------------- #
@@ -328,7 +348,7 @@ def fetch_weather(location_index):
     refresh_locations(city_name)
 
     if not token or not insee:
-        notify("Renseignez le token et la commune dans les réglages.")
+        notify_once("Renseignez le token et la commune dans les réglages.")
         clear()
         set_prop("Current.Location", city_name)
         set_prop("Weather.IsFetched", "true")
@@ -355,7 +375,7 @@ def fetch_weather(location_index):
         daily = api.daily(insee).get("forecast", [])
     except meteoconcept.MeteoConceptError as e:
         log("Erreur API : %s" % e)
-        notify(str(e))
+        notify_once(str(e))
         set_prop("Weather.IsFetched", "true")
         return
 
@@ -379,6 +399,7 @@ def fetch_weather(location_index):
                  "Daily.IsFetched", "Hourly.IsFetched", "Weather.IsFetched"):
         set_prop(flag, "true")
 
+    clear_error()
     log("Météo publiée pour %s (INSEE %s)" % (city_name, insee))
 
 

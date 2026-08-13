@@ -3,7 +3,7 @@
 # Météo Concept — `weather.meteoconcept`
 
 <!-- version:auto -->
-**Version : 1.0.5**
+**Version : 1.0.6**
 <!-- /version:auto -->
 
 **Kodi weather provider for France**, based on the

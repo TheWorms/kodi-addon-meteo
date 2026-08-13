@@ -113,6 +113,18 @@ class MeteoConcept(object):
         except (ValueError, OSError):
             return None
 
+    def _read_cache_stale(self, path):
+        """Relit le cache SANS contrainte d'age. Utilise en dernier recours
+        quand le reseau echoue : une meteo perimee vaut mieux que rien
+        (cas typique : la box demarre avant que le reseau soit pret)."""
+        if not path or not os.path.isfile(path):
+            return None
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except (ValueError, OSError):
+            return None
+
     def _write_cache(self, path, data):
         if not path:
             return
@@ -150,9 +162,22 @@ class MeteoConcept(object):
                 raw = resp.read().decode("utf-8")
             data = json.loads(raw)
         except urllib.error.HTTPError as e:
+            # Erreurs transitoires ou de quota (400 = aussi "quota depasse"
+            # chez Meteo Concept, 500/503 = panne API) : resservir le cache
+            # perime s'il existe plutot que d'echouer. Les erreurs de
+            # CONFIGURATION (401 token invalide, 403 abonnement, 404) levent
+            # toujours, pour ne pas masquer un probleme a corriger.
+            if e.code in (400, 500, 503):
+                stale = self._read_cache_stale(cache_path)
+                if stale is not None:
+                    return stale
             msg = STATUS_MESSAGES.get(e.code, "Erreur HTTP %s" % e.code)
             raise MeteoConceptError(msg)
         except urllib.error.URLError as e:
+            # Reseau indisponible : dernier recours = cache perime.
+            stale = self._read_cache_stale(cache_path)
+            if stale is not None:
+                return stale
             raise MeteoConceptError("Connexion impossible : %s" % e.reason)
         except ValueError:
             raise MeteoConceptError("Réponse illisible de l'API.")
