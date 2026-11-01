@@ -1,3 +1,7 @@
+<!-- logo:start -->
+<p align="center"><img src="weather.meteoconcept/icon.png" alt="Logo" width="160"></p>
+<!-- logo:end -->
+
 **Français** · [English](readme.en.md)
 
 # Météo Concept — `weather.meteoconcept`
