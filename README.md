@@ -7,7 +7,7 @@
 # Météo Concept — `weather.meteoconcept`
 
 <!-- version:auto -->
-**Version : 1.0.7**
+**Version : 1.0.8**
 <!-- /version:auto -->
 
 **Fournisseur météo Kodi pour la France**, basé sur l'API
