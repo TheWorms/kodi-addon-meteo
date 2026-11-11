@@ -11,6 +11,7 @@ import os
 import json
 import time
 import hashlib
+import http.client
 import urllib.request
 import urllib.parse
 import urllib.error
@@ -29,6 +30,18 @@ STATUS_MESSAGES = {
 
 class MeteoConceptError(Exception):
     pass
+
+
+# Tout ce qu'une requete peut lever cote reseau. URLError ne couvre que
+# l'ouverture de la connexion : un delai depasse ou une coupure PENDANT la
+# lecture de la reponse leve TimeoutError / ConnectionResetError (OSError)
+# ou http.client.IncompleteRead (HTTPException), qui remontaient jusqu'a
+# Kodi sans passer par le cache de secours.
+_NETWORK_ERRORS = (urllib.error.URLError, OSError, http.client.HTTPException)
+
+
+def _reason(exc):
+    return getattr(exc, "reason", None) or str(exc) or exc.__class__.__name__
 
 
 def _read_daily_limit(headers):
@@ -173,13 +186,18 @@ class MeteoConcept(object):
                     return stale
             msg = STATUS_MESSAGES.get(e.code, "Erreur HTTP %s" % e.code)
             raise MeteoConceptError(msg)
-        except urllib.error.URLError as e:
-            # Reseau indisponible : dernier recours = cache perime.
+        except _NETWORK_ERRORS as e:
+            # Reseau indisponible, delai depasse ou connexion coupee pendant
+            # la lecture de la reponse : dernier recours = cache perime.
             stale = self._read_cache_stale(cache_path)
             if stale is not None:
                 return stale
-            raise MeteoConceptError("Connexion impossible : %s" % e.reason)
+            raise MeteoConceptError("Connexion impossible : %s" % _reason(e))
         except ValueError:
+            # Reponse tronquee ou illisible : meme repli sur le cache perime.
+            stale = self._read_cache_stale(cache_path)
+            if stale is not None:
+                return stale
             raise MeteoConceptError("Réponse illisible de l'API.")
 
         self._write_cache(cache_path, data)
@@ -217,7 +235,7 @@ class MeteoConcept(object):
             if e.code == 400:
                 return True   # route atteinte/autorisée, simple souci de paramètre
             return None       # 401/404/500/503 : non concluant
-        except urllib.error.URLError:
+        except _NETWORK_ERRORS:
             return None
 
     def validate(self, insee="35238"):
@@ -241,8 +259,8 @@ class MeteoConcept(object):
         except urllib.error.HTTPError as e:
             msg = STATUS_MESSAGES.get(e.code, "Erreur HTTP %s" % e.code)
             raise MeteoConceptError(msg)
-        except urllib.error.URLError as e:
-            raise MeteoConceptError("Connexion impossible : %s" % e.reason)
+        except _NETWORK_ERRORS as e:
+            raise MeteoConceptError("Connexion impossible : %s" % _reason(e))
         except ValueError:
             raise MeteoConceptError("Réponse illisible de l'API.")
         return {"data": data, "headers": headers}
